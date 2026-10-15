@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#214f86">
+<title>Calculadora de Estacionamiento</title>
+<style>
+:root{--blue:#245a96;--navy:#17375e;--pale:#eef5fd;--ink:#142d4d;--muted:#637b9b}
+*{box-sizing:border-box}body{margin:0;background:#f7f9fc;color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+header{background:linear-gradient(135deg,#1c477b,#2c639e);color:white;padding:24px 20px;display:flex;gap:16px;align-items:center}
+.logo{font-size:46px;line-height:1}h1{font-size:clamp(22px,5vw,32px);margin:0;font-weight:750}header p{margin:5px 0 0;color:#d8e8fb}
+main{max-width:680px;margin:20px auto;padding:0 14px 28px}.panel{background:var(--pale);border-radius:18px;padding:18px;margin:14px 0}
+label{display:block;font-weight:700;margin-bottom:8px;font-size:17px}.hint{color:var(--muted);font-size:14px;margin:0 0 12px}
+input{width:100%;padding:14px;border:1px solid #9bb8da;border-radius:12px;background:white;font-size:24px;color:var(--ink)}
+.current{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#e5eef8;border:1px solid #b8cce3;border-radius:12px;padding:13px 14px;font-size:23px}
+.pill{font-size:13px;color:#176a3b;background:#d6f0df;border-radius:9px;padding:8px 10px;white-space:nowrap}
+.result{background:linear-gradient(140deg,#245a96,#1d4e86);color:white;border-radius:20px;padding:22px;margin-top:18px}
+.kicker{font-size:17px;opacity:.92}.amount{font-size:clamp(42px,10vw,62px);font-weight:800;line-height:1.2;margin:6px 0 18px}
+.breakdown{background:#ffffff0d;border:1px solid #ffffff30;border-radius:14px;padding:14px}
+.line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;font-size:15px}.line strong{text-align:right;white-space:nowrap}.line.total{border-top:1px solid #ffffff60;margin-top:6px;padding-top:14px;font-size:19px;font-weight:800}
+.notice{background:#fff4d9;border-radius:16px;padding:16px;margin-top:16px;color:#27476c;font-size:14px}
+button{width:100%;border:0;border-radius:12px;padding:14px;background:#245a96;color:white;font-size:16px;font-weight:700;margin-top:12px;cursor:pointer}
+footer{text-align:center;color:var(--muted);padding:18px;font-size:14px}
+.error{color:#a51d2d;font-size:14px;margin-top:10px;display:none}
+@media(min-width:560px){main{padding:0 20px 30px}.panel{padding:22px}.line{font-size:16px}}
+</style>
+</head>
+<body>
+<header><div class="logo" aria-hidden="true">🚘</div><div><h1>Calculadora de Estacionamiento</h1><p>Rápido · Fácil · Sin complicaciones</p></div></header>
+<main>
+<section class="panel">
+<label for="entrada">🧾 Hora de entrada (del boleto)</label>
+<p class="hint">Ingresa la hora que aparece en tu boleto.</p>
+<input id="entrada" type="time" value="08:00" required>
+</section>
+<section class="panel">
+<label>🕒 Hora de salida</label>
+<p class="hint">Se toma automáticamente la hora actual del celular.</p>
+<div class="current"><span id="horaActual">--:--</span><span class="pill">⟳ Hora actual</span></div>
+<p class="hint" id="fechaActual" style="margin:8px 0 0"></p>
+</section>
+<section class="result" aria-live="polite">
+<div class="kicker">Total a pagar</div><div class="amount" id="total">$8.00 MXN</div>
+<div class="breakdown">
+<div class="line"><span>◷ Tiempo estacionado</span><strong id="duracion">0 h 0 min</strong></div>
+<div class="line"><span>Tarifa inicial (primeras 2 horas)</span><strong>$8.00</strong></div>
+<div class="line"><span>Horas o fracciones adicionales</span><strong id="extras">0</strong></div>
+<div class="line"><span>Cargo adicional</span><strong id="cargo">$0.00</strong></div>
+<div class="line total"><span>Total</span><strong id="totalDetalle">$8.00</strong></div>
+</div>
+</section>
+<div class="notice"><strong>ℹ️ Tarifas del estacionamiento</strong><br>• Primeras 2 horas: $8.00 MXN en total.<br>• Después de las primeras 2 horas: $8.00 MXN adicionales por cada hora o fracción.</div>
+<div class="error" id="error"></div>
+<button id="limpiar" type="button">Limpiar hora de entrada</button>
+<footer>🚘 ¡Gracias por su preferencia!</footer>
+</main>
+<script>
+const entrada = document.getElementById('entrada');
+const money = n => '$' + n.toFixed(2);
+function actualizar(){
+  const now = new Date();
+  document.getElementById('horaActual').textContent = now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:false});
+  document.getElementById('fechaActual').textContent = now.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const err = document.getElementById('error');
+  if(!entrada.value){err.style.display='block';err.textContent='Ingresa la hora de entrada del boleto.';return;}
+  const [h,m] = entrada.value.split(':').map(Number);
+  const start = new Date(now);
+  start.setHours(h,m,0,0);
+  // Si la hora del boleto es posterior a la hora actual, se interpreta que entró ayer.
+  if(start.getTime()>now.getTime()) start.setDate(start.getDate()-1);
+  const minutes = Math.max(0,Math.floor((now-start)/60000));
+  const extraHours = minutes > 120 ? Math.ceil((minutes-120)/60) : 0;
+  const total = 8 + extraHours*8;
+  document.getElementById('duracion').textContent = Math.floor(minutes/60)+' h '+(minutes%60)+' min';
+  document.getElementById('extras').textContent = extraHours;
+  document.getElementById('cargo').textContent = money(extraHours*8);
+  document.getElementById('total').textContent = money(total)+' MXN';
+  document.getElementById('totalDetalle').textContent = money(total);
+  err.style.display='none';
+}
+entrada.addEventListener('input',actualizar);
+document.getElementById('limpiar').addEventListener('click',()=>{entrada.value='';actualizar();entrada.focus();});
+actualizar();
+setInterval(actualizar,1000);
+</script>
+</body>
+</html>
