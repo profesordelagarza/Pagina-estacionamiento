@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control Vehicular - Colegio Othón SLP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 2px solid #0f172a; padding: 24px; border-radius: 16px; }
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Encabezado Institucional -->
+  <header class="bg-blue-950 text-white shadow-md">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-amber-500 text-blue-950 font-extrabold text-xl flex items-center justify-center shadow">
+          CO
+        </div>
+        <div>
+          <h1 class="text-lg font-extrabold tracking-tight leading-tight">Colegio Othón • SLP</h1>
+          <p class="text-xs text-blue-200">Control de Acceso Vehicular</p>
+        </div>
+      </div>
+
+      <!-- Navegación Simple de 2 Pestañas -->
+      <nav class="flex bg-blue-900/80 p-1 rounded-xl border border-blue-800 w-full sm:w-auto">
+        <button id="tab-scanner" onclick="switchTab('scanner')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition bg-white text-blue-950 shadow-sm">
+          Verificar Acceso (QR)
+        </button>
+        <button id="tab-autos" onclick="switchTab('autos')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition text-blue-100 hover:text-white">
+          Autos (Registro y Edición)
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
+
+    <!-- PESTAÑA 1: VERIFICAR ACCESO / ESCÁNER QR -->
+    <section id="view-scanner" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Lector de Cámara QR y Consulta Rápida -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold text-slate-900 text-base">1. Escanear Código QR</h2>
+            <button id="btn-toggle-cam" onclick="toggleCamera()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-900 text-white hover:bg-blue-800 transition">
+              Encender Cámara
+            </button>
+          </div>
+
+          <!-- Contenedor del Escáner -->
+          <div class="relative bg-slate-900 rounded-xl overflow-hidden aspect-video flex items-center justify-center border border-slate-300">
+            <div id="qr-reader" class="w-full h-full"></div>
+            <div id="cam-placeholder" class="text-center p-4 text-slate-400">
+              <svg class="w-10 h-10 mx-auto mb-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+              <p class="text-xs">Presiona <strong>"Encender Cámara"</strong> para leer el collarín QR</p>
+            </div>
+          </div>
+
+          <!-- Búsqueda Manual por Placa o Folio -->
+          <div class="pt-2 border-t border-slate-100">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">O consulta manualmente por Placa o Folio de Collarín:</label>
+            <div class="flex gap-2">
+              <input type="text" id="manual-search" placeholder="Ej. VEA-452-A o OTH-01" class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-900" onkeydown="if(event.key==='Enter') verificarManual()">
+              <button onclick="verificarManual()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition">
+                Verificar
+              </button>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-1.5 items-center">
+              <span class="text-[11px] text-slate-400">Prueba rápida:</span>
+              <button onclick="verificarCodigo('OTH-01')" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">OTH-01</button>
+              <button onclick="verificarCodigo('VEM-819-B')" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium">VEM-819-B</button>
+              <button onclick="verificarCodigo('XXX-999')" class="text-[11px] px-2 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium">Placa no registrada</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultado de Verificación -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between">
+          <div>
+            <h2 class="font-bold text-slate-900 text-base mb-4">2. Resultado de Verificación</h2>
+            
+            <!-- Estado Inicial -->
+            <div id="result-empty" class="py-12 text-center border-2 border-dashed border-slate-200 rounded-xl px-4">
+              <p class="text-sm font-medium text-slate-500">En espera de lectura QR o consulta de placa...</p>
+              <p class="text-xs text-slate-400 mt-1">Aquí aparecerá si el vehículo pertenece al personal del Colegio Othón.</p>
+            </div>
+
+            <!-- Estado Autorizado -->
+            <div id="result-ok" class="hidden rounded-2xl bg-emerald-50 border-2 border-emerald-500 p-5 space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-600 text-white tracking-wide">
+                  ✓ VEHÍCULO AUTORIZADO
+                </span>
+                <span id="res-folio" class="font-mono font-bold text-emerald-900 bg-emerald-200/70 px-2.5 py-0.5 rounded-md text-xs">OTH-01</span>
+              </div>
+
+              <div class="bg-white rounded-xl p-4 border border-emerald-200 space-y-3">
+                <div>
+                  <p class="text-[11px] uppercase font-bold text-slate-400">Personal Autorizado</p>
+                  <p id="res-nombre" class="text-lg font-extrabold text-slate-900 leading-snug">-</p>
+                  <p id="res-puesto" class="text-xs font-medium text-slate-600">-</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                  <div>
+                    <p class="text-[11px] uppercase font-bold text-slate-400">Placas (SLP)</p>
+                    <p id="res-placas" class="font-mono text-base font-extrabold text-blue-950">-</p>
+                  </div>
+                  <div>
+                    <p class="text-[11px] uppercase font-bold text-slate-400">Vehículo y Color</p>
+                    <p id="res-vehiculo" class="text-sm font-semibold text-slate-800">-</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Estado No Registrado -->
+            <div id="result-fail" class="hidden rounded-2xl bg-red-50 border-2 border-red-500 p-5 space-y-3">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-600 text-white tracking-wide">
+                ✕ VEHÍCULO NO REGISTRADO
+              </span>
+              <p class="text-sm font-semibold text-red-950">El código o placa consultada (<span id="res-query-fail" class="font-mono underline"></span>) no pertenece a ningún auto registrado en el Colegio Othón.</p>
+              <p class="text-xs text-red-800">Solicita identificación oficial en caseta antes de permitir el ingreso.</p>
+            </div>
+          </div>
+
+          <button id="btn-clear-result" onclick="limpiarResultado()" class="hidden mt-4 w-full py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            Limpiar pantalla para siguiente auto
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PESTAÑA 2: REGISTRO Y EDICIÓN DE AUTOS -->
+    <section id="view-autos" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Formulario de Registro / Edición -->
+        <div class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 h-fit">
+          <div class="flex items-center justify-between mb-4">
+            <h2 id="form-title" class="font-bold text-slate-900 text-base">Registrar Nuevo Auto</h2>
+            <button id="btn-cancel-edit" onclick="cancelarEdicion()" class="hidden text-xs font-semibold text-red-600 hover:underline">
+              Cancelar edición
+            </button>
+          </div>
+
+          <form id="auto-form" onsubmit="guardarAuto(event)" class="space-y-3.5">
+            <input type="hidden" id="edit-id" value="">
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Folio Collarín *</label>
+                <input type="text" id="f-folio" required placeholder="OTH-04" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase focus:ring-2 focus:ring-blue-900 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Número de Placas *</label>
+                <input type="text" id="f-placas" required placeholder="VEA-123-A" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase focus:ring-2 focus:ring-blue-900 focus:outline-none">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Personal *</label>
+              <input type="text" id="f-nombre" required placeholder="Ej. Mtra. Sofía Hernández" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Área / Puesto</label>
+              <input type="text" id="f-puesto" placeholder="Ej. Docente Primaria / Administración" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Marca y Modelo *</label>
+                <input type="text" id="f-modelo" required placeholder="Ej. Nissan Versa" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Color *</label>
+                <input type="text" id="f-color" required placeholder="Ej. Gris Plata" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+              </div>
+            </div>
+
+            <button type="submit" id="btn-submit" class="w-full py-2.5 rounded-xl bg-blue-950 hover:bg-blue-900 text-white font-semibold text-sm shadow-sm transition">
+              Guardar Vehículo y Generar QR
+            </button>
+          </form>
+        </div>
+
+        <!-- Lista de Autos Registrados + Exportar/Importar JSON -->
+        <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+            <div>
+              <h2 class="font-bold text-slate-900 text-base">Vehículos Registrados (<span id="count-autos">0</span>)</h2>
+              <p class="text-[11px] text-slate-500">Exporta o importa la base de datos para compartirla con otros equipos.</p>
+            </div>
+            
+            <!-- Botones Exportar / Importar JSON -->
+            <div class="flex items-center gap-2">
+              <button onclick="exportarJSON()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-sm" title="Descargar base de datos en archivo JSON">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Exportar JSON
+              </button>
+              <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold cursor-pointer transition" title="Cargar archivo JSON desde otro equipo">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Importar JSON
+                <input type="file" id="import-file" accept=".json" class="hidden" onchange="importarJSON(event)">
+              </label>
+            </div>
+          </div>
+
+          <!-- Buscador -->
+          <div>
+            <input type="text" id="filter-autos" oninput="renderLista()" placeholder="Buscar por nombre, placa o collarín..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+          </div>
+
+          <!-- Listado -->
+          <div id="autos-list" class="space-y-2.5 max-h-[520px] overflow-y-auto pr-1"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal para Ver / Imprimir Collarín QR -->
+  <div id="qr-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-5">
+      <div id="print-area" class="text-center space-y-3 bg-white">
+        <div class="border-b border-slate-200 pb-2">
+          <p class="text-xs font-extrabold uppercase tracking-wider text-blue-950">Colegio Othón • SLP</p>
+          <p class="text-[11px] text-slate-500">Marbete de Acceso Vehicular</p>
+        </div>
+        <div id="modal-qr-box" class="flex justify-center py-2"></div>
+        <div>
+          <p id="modal-folio" class="font-mono text-xl font-extrabold text-blue-950">OTH-01</p>
+          <p id="modal-placas" class="font-mono text-sm font-bold text-slate-700">VEA-452-A</p>
+          <p id="modal-nombre" class="text-xs font-medium text-slate-600 mt-1">-</p>
+          <p id="modal-vehiculo" class="text-[11px] text-slate-400">-</p>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="window.print()" class="flex-1 py-2.5 rounded-xl bg-blue-950 hover:bg-blue-900 text-white text-xs font-semibold">
+          Imprimir Collarín
+        </button>
+        <button onclick="descargarQR()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-blue-950 text-xs font-bold">
+          Descargar PNG
+        </button>
+        <button onclick="cerrarModalQR()" class="px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'colegio_othon_slp_autos_v1';
+
+    // Datos iniciales de ejemplo (San Luis Potosí)
+    const defaultAutos = [
+      { id: '1', folio: 'OTH-01', placas: 'VEA-452-A', nombre: 'Mtro. Carlos Mendoza', puesto: 'Dirección Secundaria', modelo: 'Nissan Sentra', color: 'Blanco' },
+      { id: '2', folio: 'OTH-02', placas: 'VEM-819-B', nombre: 'Lic. Laura Ramírez', puesto: 'Docente Primaria', modelo: 'Mazda 3', color: 'Gris Oxford' },
+      { id: '3', folio: 'OTH-03', placas: 'UWD-104-C', nombre: 'Ing. Roberto Torres', puesto: 'Coordinación Académica', modelo: 'Honda CR-V', color: 'Azul Marino' }
+    ];
+
+    let autos = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultAutos;
+    let html5QrCode = null;
+    let cameraActive = false;
+    let currentModalFolio = '';
+
+    function saveStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(autos));
+      renderLista();
+      sugerirSiguienteFolio();
+    }
+
+    // Navegación entre pestañas
+    function switchTab(tab) {
+      const viewScanner = document.getElementById('view-scanner');
+      const viewAutos = document.getElementById('view-autos');
+      const tabScanner = document.getElementById('tab-scanner');
+      const tabAutos = document.getElementById('tab-autos');
+
+      if (tab === 'scanner') {
+        viewScanner.classList.remove('hidden');
+        viewAutos.classList.add('hidden');
+        tabScanner.className = 'flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition bg-white text-blue-950 shadow-sm';
+        tabAutos.className = 'flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition text-blue-100 hover:text-white';
+      } else {
+        if (cameraActive) toggleCamera();
+        viewScanner.classList.add('hidden');
+        viewAutos.classList.remove('hidden');
+        tabAutos.className = 'flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition bg-white text-blue-950 shadow-sm';
+        tabScanner.className = 'flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition text-blue-100 hover:text-white';
+        renderLista();
+        sugerirSiguienteFolio();
+      }
+    }
+
+    // Escáner QR con cámara
+    async function toggleCamera() {
+      const btn = document.getElementById('btn-toggle-cam');
+      const placeholder = document.getElementById('cam-placeholder');
+
+      if (!cameraActive) {
+        try {
+          html5QrCode = new Html5Qrcode("qr-reader");
+          placeholder.classList.add('hidden');
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            (decodedText) => {
+              verificarCodigo(decodedText);
+            }
+          );
+          cameraActive = true;
+          btn.textContent = 'Apagar Cámara';
+          btn.classList.replace('bg-blue-900', 'bg-red-600');
+        } catch (err) {
+          placeholder.classList.remove('hidden');
+          alert('No se pudo acceder a la cámara. Verifica los permisos del navegador o asegúrate de abrir la página mediante HTTPS.');
+        }
+      } else {
+        if (html5QrCode) {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        }
+        cameraActive = false;
+        placeholder.classList.remove('hidden');
+        btn.textContent = 'Encender Cámara';
+        btn.classList.replace('bg-red-600', 'bg-blue-900');
+      }
+    }
+
+    // Verificación por QR, Folio o Placa
+    function verificarManual() {
+      const val = document.getElementById('manual-search').value.trim();
+      if (!val) return;
+      verificarCodigo(val);
+    }
+
+    function verificarCodigo(rawQuery) {
+      const query = rawQuery.trim().toUpperCase();
+      // Soporta QR en formato simple ("OTH-01") o JSON ("{\"folio\":\"OTH-01\"}")
+      let searchKey = query;
+      try {
+        const parsed = JSON.parse(rawQuery);
+        if (parsed.folio) searchKey = parsed.folio.toUpperCase();
+      } catch (e) {}
+
+      const cleanKey = searchKey.replace(/[^A-Z0-9]/g, '');
+
+      const found = autos.find(a => {
+        const cleanFolio = a.folio.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const cleanPlacas = a.placas.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        return cleanFolio === cleanKey || cleanPlacas === cleanKey;
+      });
+
+      document.getElementById('result-empty').classList.add('hidden');
+      document.getElementById('btn-clear-result').classList.remove('hidden');
+
+      if (found) {
+        document.getElementById('result-fail').classList.add('hidden');
+        document.getElementById('result-ok').classList.remove('hidden');
+        document.getElementById('res-folio').textContent = found.folio;
+        document.getElementById('res-nombre').textContent = found.nombre;
+        document.getElementById('res-puesto').textContent = found.puesto || 'Personal Colegio Othón';
+        document.getElementById('res-placas').textContent = found.placas;
+        document.getElementById('res-vehiculo').textContent = `${found.modelo} • ${found.color}`;
+      } else {
+        document.getElementById('result-ok').classList.add('hidden');
+        document.getElementById('result-fail').classList.remove('hidden');
+        document.getElementById('res-query-fail').textContent = searchKey;
+      }
+    }
+
+    function limpiarResultado() {
+      document.getElementById('result-ok').classList.add('hidden');
+      document.getElementById('result-fail').classList.add('hidden');
+      document.getElementById('btn-clear-result').classList.add('hidden');
+      document.getElementById('result-empty').classList.remove('hidden');
+      document.getElementById('manual-search').value = '';
+    }
+
+    // Registro y Edición de Autos
+    function sugerirSiguienteFolio() {
+      if (document.getElementById('edit-id').value) return;
+      const nextNum = String(autos.length + 1).padStart(2, '0');
+      document.getElementById('f-folio').value = `OTH-${nextNum}`;
+    }
+
+    function guardarAuto(e) {
+      e.preventDefault();
+      const editId = document.getElementById('edit-id').value;
+      const folio = document.getElementById('f-folio').value.trim().toUpperCase();
+      const placas = document.getElementById('f-placas').value.trim().toUpperCase();
+      const nombre = document.getElementById('f-nombre').value.trim();
+      const puesto = document.getElementById('f-puesto').value.trim();
+      const modelo = document.getElementById('f-modelo').value.trim();
+      const color = document.getElementById('f-color').value.trim();
+
+      if (editId) {
+        const idx = autos.findIndex(a => a.id === editId);
+        if (idx !== -1) {
+          autos[idx] = { id: editId, folio, placas, nombre, puesto, modelo, color };
+        }
+        cancelarEdicion();
+      } else {
+        const nuevo = {
+          id: Date.now().toString(),
+          folio,
+          placas,
+          nombre,
+          puesto,
+          modelo,
+          color
+        };
+        autos.unshift(nuevo);
+        document.getElementById('auto-form').reset();
+        mostrarModalQR(nuevo.id);
+      }
+
+      saveStorage();
+    }
+
+    function editarAuto(id) {
+      const auto = autos.find(a => a.id === id);
+      if (!auto) return;
+      document.getElementById('edit-id').value = auto.id;
+      document.getElementById('f-folio').value = auto.folio;
+      document.getElementById('f-placas').value = auto.placas;
+      document.getElementById('f-nombre').value = auto.nombre;
+      document.getElementById('f-puesto').value = auto.puesto || '';
+      document.getElementById('f-modelo').value = auto.modelo;
+      document.getElementById('f-color').value = auto.color;
+
+      document.getElementById('form-title').textContent = `Editando ${auto.folio}`;
+      document.getElementById('btn-submit').textContent = 'Actualizar Cambios';
+      document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    }
+
+    function cancelarEdicion() {
+      document.getElementById('edit-id').value = '';
+      document.getElementById('auto-form').reset();
+      document.getElementById('form-title').textContent = 'Registrar Nuevo Auto';
+      document.getElementById('btn-submit').textContent = 'Guardar Vehículo y Generar QR';
+      document.getElementById('btn-cancel-edit').classList.add('hidden');
+      sugerirSiguienteFolio();
+    }
+
+    function eliminarAuto(id) {
+      if (!confirm('¿Eliminar este vehículo del registro del Colegio Othón?')) return;
+      autos = autos.filter(a => a.id !== id);
+      saveStorage();
+    }
+
+    function renderLista() {
+      const list = document.getElementById('autos-list');
+      const filter = (document.getElementById('filter-autos')?.value || '').toLowerCase();
+      
+      const filtered = autos.filter(a =>
+        a.nombre.toLowerCase().includes(filter) ||
+        a.placas.toLowerCase().includes(filter) ||
+        a.folio.toLowerCase().includes(filter) ||
+        a.modelo.toLowerCase().includes(filter)
+      );
+
+      document.getElementById('count-autos').textContent = autos.length;
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">No se encontraron vehículos registrados.</p>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(auto => `
+        <div class="p-3.5 rounded-xl border border-slate-200 hover:border-blue-300 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-extrabold px-2 py-0.5 rounded bg-blue-950 text-white">${auto.folio}</span>
+              <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">${auto.placas}</span>
+            </div>
+            <p class="font-bold text-sm text-slate-900 pt-1">${auto.nombre}</p>
+            <p class="text-xs text-slate-500">${auto.modelo} • ${auto.color} ${auto.puesto ? `(${auto.puesto})` : ''}</p>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="mostrarModalQR('${auto.id}')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-xs font-semibold text-slate-800">
+              Ver QR
+            </button>
+            <button onclick="editarAuto('${auto.id}')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-blue-50 text-xs font-semibold text-blue-800">
+              Editar
+            </button>
+            <button onclick="eliminarAuto('${auto.id}')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-red-50 text-xs font-semibold text-red-600">
+              Borrar
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Modal QR e Impresión
+    function mostrarModalQR(id) {
+      const auto = autos.find(a => a.id === id);
+      if (!auto) return;
+      currentModalFolio = auto.folio;
+
+      document.getElementById('modal-folio').textContent = auto.folio;
+      document.getElementById('modal-placas').textContent = auto.placas;
+      document.getElementById('modal-nombre').textContent = auto.nombre;
+      document.getElementById('modal-vehiculo').textContent = `${auto.modelo} • ${auto.color}`;
+
+      const qrBox = document.getElementById('modal-qr-box');
+      qrBox.innerHTML = '';
+      new QRCode(qrBox, {
+        text: auto.folio,
+        width: 170,
+        height: 170,
+        colorDark: "#0f172a",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    function cerrarModalQR() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    function descargarQR() {
+      const canvas = document.querySelector('#modal-qr-box canvas');
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = `QR_${currentModalFolio}_ColegioOthon.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Exportar e Importar Base de Datos JSON
+    function exportarJSON() {
+      const fecha = new Date().toISOString().slice(0, 10);
+      const dataStr = JSON.stringify(autos, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `respaldo_colegio_othon_${fecha}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importarJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          if (!Array.isArray(importedData)) {
+            alert('El archivo seleccionado no tiene un formato válido.');
+            return;
+          }
+
+          const reemplazar = confirm(
+            `Se encontraron ${importedData.length} registros en el archivo.\n\n` +
+            `• Presiona ACEPTAR para REEMPLAZAR la lista actual con estos datos.\n` +
+            `• Presiona CANCELAR para COMBINAR ambos listados sin borrar los actuales.`
+          );
+
+          if (reemplazar) {
+            autos = importedData;
+          } else {
+            const existingFolios = new Set(autos.map(a => a.folio.toUpperCase()));
+            const nuevos = importedData.filter(item => item.folio && !existingFolios.has(item.folio.toUpperCase()));
+            autos = [...nuevos, ...autos];
+          }
+
+          saveStorage();
+          alert('Base de datos cargada correctamente.');
+        } catch (err) {
+          alert('Error al leer el archivo JSON. Asegúrate de que sea un respaldo válido.');
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    // Inicializar
+    renderLista();
+    sugerirSiguienteFolio();
+  </script>
+</body>
+</html>
